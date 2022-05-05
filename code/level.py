@@ -1,3 +1,4 @@
+from calendar import c
 from numpy import place
 import pygame 
 from settings import *
@@ -15,14 +16,32 @@ from ult import UltPlayer
 from upgrade import Upgrade
 
 class Level:
-    def __init__(self):
+    def __init__(self, level_index, stats = {'health': 100, 'energy' : 60, 'attack' : 10, 'magic' : 4, 'speed' : 6}, exp = 0, total_exp = 0, level_num = 1):
+        # setup
+        self.game_paused = False
+        self.clear = False
 
         # get the display surface 
         self.display_surface = pygame.display.get_surface()
-        self.game_paused = False
+
+        self.level_index = level_index
+
+        # stats
+        self.stats = stats
+        self.exp = exp
+        self.total_exp = total_exp
+        self.level_num = level_num
+        
+        # sound
+        self.main_sound = pygame.mixer.Sound('../audio/main.ogg')
+        self.main_sound.set_volume(0.3)
+        self.main_sound.play(loops= -1)
+        self.weilou_clear = pygame.mixer.Sound('../audio/weilou_clear.mp3')
+        self.weilou_clear.set_volume(0.6)
+        self.clear_sound_play = True
 
         # sprite group setup
-        self.visible_sprites = YSortCameraGroup()
+        self.visible_sprites = YSortCameraGroup(self.level_index)
         self.obstacle_sprites = pygame.sprite.Group()
 
         # attack sprites
@@ -44,10 +63,11 @@ class Level:
 
     def create_map(self):
         layouts = {
-            'boundary': import_csv_layout('../map/map_FloorBlocks.csv'),
-            'grass': import_csv_layout('../map/map_Grass.csv'),
-            'object': import_csv_layout('../map/map_Objects.csv'),
-            'entities': import_csv_layout('../map/map_Entities.csv')
+            'boundary': import_csv_layout(f'../level/{self.level_index}/map_FloorBlocks.csv'),
+            'grass': import_csv_layout(f'../level/{self.level_index}/map_Grass.csv'),
+            'object': import_csv_layout(f'../level/{self.level_index}/map_Objects.csv'),
+            'entities': import_csv_layout(f'../level/{self.level_index}/map_Entities.csv'),
+            'target' : import_csv_layout(f'../level/{self.level_index}/map_Target.csv')
         }
         graphics = {
             'grass': import_folder('../graphics/Grass'),
@@ -72,7 +92,18 @@ class Level:
 
                         if style == 'object':
                             surf = graphics['objects'][int(col)]
-                            Tile((x,y),[self.visible_sprites,self.obstacle_sprites],'object',surf)
+                            Tile((x,y),[self.visible_sprites,self.obstacle_sprites]
+                            ,'object'
+                            ,surf)
+
+                        if style == 'target':
+                            surf = pygame.image.load('../graphics/test/weilou.png')
+                            Tile(
+                                (x, y),
+                                [self.visible_sprites,self.obstacle_sprites, self.attackable_sprites],
+                                'target',
+                                surf
+                            )
 
                         if style == 'entities':
                             if col == '394':
@@ -84,7 +115,8 @@ class Level:
                                     self.destroy_attack,
                                     self.create_magic,
                                     self.create_ult,
-                                    self.create_ult_effect_sprite)
+                                    self.create_ult_effect_sprite,
+                                    self.stats, self.exp, self.total_exp, self.level_num)
                             else:
                                 if col == '390': monster_name = 'bamboo'
                                 elif col == '391': monster_name = 'spirit'
@@ -139,8 +171,12 @@ class Level:
                             for leaf in range(randint(3,6)):
                                 self.animation_player.create_grass_particles(pos - offset,[self.visible_sprites])
                             target_sprite.kill()
+                        elif target_sprite.sprite_type == 'target':
+                            self.game_paused = True
+                            self.clear = True
                         else:
                             target_sprite.get_damage(self.player,attack_sprite.sprite_type)
+
 
     def damage_player(self,amount,attack_type):
         if self.player.vulnerable:
@@ -170,9 +206,16 @@ class Level:
     def run(self):
         self.visible_sprites.custom_draw(self.player)
         self.ui.display(self.player, self.player.sing_learned)
+        self.stats = self.player.stats
+        self.exp = self.player.exp
+        self.total_exp = self.player.total_exp
+        self.level_num = self.player.level
         
-        if self.game_paused:
+        if self.game_paused and not self.clear:
             self.upgrade.display()
+        elif self.game_paused and self.clear and self.clear_sound_play:
+            self.weilou_clear.play()
+            self.clear_sound_play = False
         else:
             self.visible_sprites.update()
             self.visible_sprites.enemy_update(self.player)
@@ -180,17 +223,18 @@ class Level:
 
 
 class YSortCameraGroup(pygame.sprite.Group):
-    def __init__(self):
+    def __init__(self, level_index):
 
         # general setup 
         super().__init__()
+        self.level_index = level_index
         self.display_surface = pygame.display.get_surface()
         self.half_width = self.display_surface.get_size()[0] // 2
         self.half_height = self.display_surface.get_size()[1] // 2
         self.offset = pygame.math.Vector2()
 
         # creating the floor
-        self.floor_surf = pygame.image.load('../graphics/tilemap/ground.png').convert()
+        self.floor_surf = pygame.image.load(f'../level/{self.level_index}.png').convert()
         self.floor_rect = self.floor_surf.get_rect(topleft = (0,0))
 
     def custom_draw(self,player):

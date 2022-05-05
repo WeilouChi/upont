@@ -22,7 +22,7 @@ def import_folder(path):
             full_path = path + '/' + image
 
             image_surf = pygame.image.load(full_path).convert_alpha()
-            
+        
             # if path == '../graphics/particles/earthquake/frames' and int(image.split('.')[0]) > 12:
             #     image_surf = pygame.transform.scale(image_surf, (int(image.split('.')[0]) * 30, int(image.split('.')[0]) * 30))
             surface_list.append(image_surf)

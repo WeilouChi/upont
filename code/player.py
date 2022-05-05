@@ -6,7 +6,8 @@ from entity import Entity
 
 
 class Player(Entity):
-    def __init__(self,pos,groups,obstacle_sprites, create_attack, destroy_attack, create_magic, create_ult, create_ult_effect_sprite):
+    def __init__(self,pos,groups,obstacle_sprites, create_attack, destroy_attack, create_magic, create_ult, create_ult_effect_sprite
+    , stats, exp, total_exp, level_num):
         super().__init__(groups)
         self.image = pygame.image.load('../graphics/test/upont.png').convert_alpha()
         self.rect = self.image.get_rect(topleft = pos)
@@ -57,15 +58,15 @@ class Player(Entity):
         
 
         # stats
-        self.stats = {'health': 100, 'energy' : 60, 'attack' : 10, 'magic' : 4, 'speed' : 6}
+        self.stats = stats
         self.max_stats = {'health': 300, 'energy': 140, 'attack': 20, 'magic' : 10, 'speed': 10}
         self.upgrade_cost = {'health': 100, 'energy': 100, 'attack': 100, 'magic' : 100, 'speed': 100}
         self.health = self.stats['health']
         self.energy = self.stats['energy'] 
-        self.exp = 0
-        self.total_exp = 0
+        self.exp = exp
+        self.total_exp = total_exp
         self.speed = self.stats['speed']
-        self.level = 9
+        self.level = level_num
 
         # damage timer
         self.vulnerable = True
@@ -285,8 +286,7 @@ class Player(Entity):
             self.health = self.stats['health']
     
     def level_up(self):
-        #need_exp = ((self.level-1)**3 + 5) / 5 * ((self.level-1)*2 + 5)
-        need_exp = self.level * 10 + 0
+        need_exp = self.level * 50 + 0
         if self.total_exp >= need_exp:
             self.total_exp -= need_exp
             self.level += 1
