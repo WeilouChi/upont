@@ -33,9 +33,7 @@ class Level:
         self.level_num = level_num
         
         # sound
-        self.main_sound = pygame.mixer.Sound('../audio/main.ogg')
-        self.main_sound.set_volume(0.3)
-        self.main_sound.play(loops= -1)
+        
         self.weilou_clear = pygame.mixer.Sound('../audio/weilou_clear.mp3')
         self.weilou_clear.set_volume(0.6)
         self.clear_sound_play = True

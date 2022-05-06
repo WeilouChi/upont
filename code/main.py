@@ -3,6 +3,7 @@ from settings import *
 from level import Level
 from intro import Intro
 from story import Story
+from ending import Ending
 
 class Game:
 	def __init__(self):
@@ -26,6 +27,11 @@ class Game:
 		# story sound
 		self.story_sound = pygame.mixer.Sound('../audio/Lyphard Melody.mp3')
 		self.story_sound.set_volume(0.3)
+		
+		# main sound
+		self.main_sound = pygame.mixer.Sound('../audio/main.ogg')
+		self.main_sound.set_volume(0)
+		self.main_sound.play(loops= -1)
 
 		# weilou sound
 		self.weilou_0 = pygame.mixer.Sound('../audio/weilou_level_0.mp3')
@@ -34,6 +40,12 @@ class Game:
 		self.weilou_1.set_volume(0.6)
 		self.weilou_2 = pygame.mixer.Sound('../audio/weilou_level_2.mp3')
 		self.weilou_2.set_volume(0.6)
+		self.weilou_fight = pygame.mixer.Sound('../audio/weilou_fight.mp3')
+		self.weilou_fight.set_volume(0.6)
+
+		# aimer sound
+		self.aimer_mine = pygame.mixer.Sound('../audio/Mine.mp3')
+		self.aimer_mine.set_volume(0.4)
 		
 		# overworld
 		self.status = 'intro'
@@ -41,11 +53,21 @@ class Game:
 	def create_story(self):
 		self.story = Story(self.screen, self.story_index)
 
+	def create_ending(self):
+		self.ending = Ending()
+
 	def create_level(self):
+		
 		if self.level_index == 0:
 			self.level = Level(self.level_index)
 		else:
 			self.level = Level(self.level_index, self.stats, self.exp, self.total_exp, self.level_num)
+		
+	def check_game_over(self):
+		if self.level.player.health <= 0:
+			self.level.player.health = self.stats['health']
+			self.level = Level(self.level_index, self.stats, self.exp, self.total_exp, self.level_num)
+			self.weilou_fight.play()
 
 	def state_manager(self):
 		if self.status == 'intro':
@@ -54,6 +76,8 @@ class Game:
 			self.level.run()
 		elif self.status == 'story':
 			self.story.run()
+		elif self.status == 'ending':
+			self.ending.run()
 
 	def run(self):
 		while True:
@@ -69,13 +93,10 @@ class Game:
 						if (self.level.clear and event.key == pygame.K_RETURN) or event.key == pygame.K_ESCAPE:
 							self.status = 'story'
 							self.story_index += 1
+							self.level_index += 1
 							self.create_story()
-							self.level.main_sound.stop()
+							self.main_sound.set_volume(0)
 							self.story_sound.set_volume(0.3)
-							self.stats = self.level.stats
-							self.exp = self.level.exp
-							self.total_exp = self.level.total_exp
-							self.level_num = self.level.level_num
 
 							
 				elif self.status == 'intro':
@@ -98,22 +119,39 @@ class Game:
 									self.weilou_2.play()
 								self.status = 'main_game'
 								self.create_level()
-								self.level_index += 1
+								self.main_sound.set_volume(0.3)
+								
 								self.story_sound.set_volume(0)
-							elif self.story_index <= 5 and self.level_index > 2:
+							elif self.story_index < 5 and self.level_index > 2:
 								self.story_index += 1
 								self.create_story()
-							else:
-								self.intro_sound.play()
-								self.status = 'intro'
-								self.level_index = 0
-								self.story_index = 0
+							elif self.story_index == 5:
+								self.create_ending()
+								self.status = 'ending'
 								self.story_sound.set_volume(0)
+								self.aimer_mine.play()
 
+				elif self.status == 'ending':
+					if event.type == pygame.KEYDOWN:
+						if event.key == pygame.K_RETURN:
+							self.aimer_mine.stop()
+							self.intro_sound.play()
+							self.status = 'intro'
+							self.level_index = 0
+							self.story_index = 0
+							self.story_sound.set_volume(0)
+			
 			if self.status == 'main_game':
+				self.stats = self.level.stats
+				self.exp = self.level.exp
+				self.total_exp = self.level.total_exp
+				self.level_num = self.level.level_num
 				self.screen.fill(WATER_COLOR)
-			elif self.status == 'story':
+				self.check_game_over()
+		
+			elif self.status == 'story' or self.status == 'ending':
 				self.screen.fill('black')
+
 			self.state_manager()
 			pygame.display.update()
 			self.clock.tick(FPS)
